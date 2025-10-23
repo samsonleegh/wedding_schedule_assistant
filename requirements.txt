@@ -1,4 +1,4 @@
-python-telegram-bot==20.7
+python-telegram-bot[webhooks]==20.7
 openai>=1.51.0
 faiss-cpu==1.8.0.post1
 python-dotenv==1.0.1
