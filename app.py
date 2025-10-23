@@ -509,6 +509,28 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Entrypoint
 # -----------------------------
 
+# def main():
+#     if not TELEGRAM_BOT_TOKEN:
+#         raise RuntimeError("TELEGRAM_BOT_TOKEN missing")
+#     if not OPENAI_API_KEY:
+#         raise RuntimeError("OPENAI_API_KEY missing")
+
+#     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+#     app.add_handler(CommandHandler("start", start))
+#     app.add_handler(CommandHandler("help", help_cmd))
+#     app.add_handler(CommandHandler("role", role_cmd))
+#     app.add_handler(CommandHandler("refresh", refresh_cmd))
+#     app.add_handler(CommandHandler("remember", remember_cmd))
+#     app.add_handler(CommandHandler("notes", notes_cmd))
+#     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
+
+#     print("Bot running… Press Ctrl+C to stop.")
+#     app.run_polling(drop_pending_updates=True)
+
+# if __name__ == "__main__":
+#     main()
+
 def main():
     if not TELEGRAM_BOT_TOKEN:
         raise RuntimeError("TELEGRAM_BOT_TOKEN missing")
@@ -517,6 +539,7 @@ def main():
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
+    # --- handlers (unchanged) ---
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("role", role_cmd))
@@ -525,8 +548,30 @@ def main():
     app.add_handler(CommandHandler("notes", notes_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
 
-    print("Bot running… Press Ctrl+C to stop.")
-    app.run_polling(drop_pending_updates=True)
+    # --- webhook mode for Render Web Service ---
+    import os
+    port = int(os.environ.get("PORT", "10000"))  # Render provides this
+    base = os.environ.get("PUBLIC_BASE_URL")
+    if not base:
+        raise RuntimeError("PUBLIC_BASE_URL missing (e.g., https://your-app.onrender.com)")
+
+    # Use token as a path component (keeps the endpoint obscure)
+    url_path = TELEGRAM_BOT_TOKEN
+
+    # Optional but recommended: verify Telegram via secret token header
+    secret = os.environ.get("WEBHOOK_SECRET", "")
+
+    print(f"Starting webhook server on 0.0.0.0:{port}")
+    print(f"Setting webhook to: {base}/{url_path}")
+
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=url_path,                       # local path
+        webhook_url=f"{base}/{url_path}",        # public URL
+        secret_token=secret if secret else None, # enables Telegram header verification
+        drop_pending_updates=True,
+    )
 
 if __name__ == "__main__":
-    main()
+    main(
